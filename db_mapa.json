@@ -1,0 +1,18 @@
+{
+  "comercial": {
+    "responsavel": "Ana",
+    "projetos_ativos": 4,
+    "meta_mensal": 120000
+  },
+  "compras": {
+    "responsavel": "Carlos",
+    "status": "aguardando orçamento"
+  },
+  "inovacao": {
+    "diretor": "Você",
+    "projetos": [
+      {"nome": "Digital Twin", "status": "em validação"},
+      {"nome": "Power BI", "status": "finalizado"}
+    ]
+  }
+}
