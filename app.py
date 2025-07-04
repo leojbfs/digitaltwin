@@ -2,59 +2,46 @@
 import streamlit as st
 from interpretador import interpretar_entrada
 from diario_twin_db import obter_ou_criar_usuario, salvar_interacao, buscar_historico
+from config import OPENAI_API_KEY
 
-st.set_page_config(page_title="Diário Twin", layout="wide")
-st.title("🧠 Diário Twin - Registro Inteligente")
+# Título do app
+st.title("Diário Digital Twin")
 
-# Sessão do usuário
-with st.sidebar:
-    st.header("🔐 Identificação")
-    nome_usuario = st.text_input("Seu nome ou apelido")
-    chave_api = st.text_input("Sua chave de API", type="password")
-    provedor = st.selectbox("Escolha o provedor de IA", ["openai", "openrouter", "gemini"])
-    if st.button("Entrar"):
-        if nome_usuario and chave_api:
-            usuario_id = obter_ou_criar_usuario(nome_usuario, chave_api, provedor)
-            st.session_state["usuario_id"] = usuario_id
-            st.session_state["chave_api"] = chave_api
-            st.session_state["provedor"] = provedor
-            st.success("Usuário autenticado.")
-        else:
-            st.error("Preencha todos os campos.")
+# Campos de entrada
+nome_usuario = st.text_input("Seu nome (ou apelido)")
+chave_api_input = st.text_input("Sua chave de API (opcional)", type="password")
+provedor = st.selectbox("Escolha o provedor de IA", ["openai", "openrouter", "gemini"])
 
-# Verifica se o usuário está autenticado
-if "usuario_id" not in st.session_state:
-    st.warning("Autentique-se para usar o diário.")
-    st.stop()
+# Entrada de texto
+mensagem = st.text_area("Escreva algo para registrar ou refletir:")
 
-# Campo de entrada
-st.subheader("✍️ Escreva seu pensamento, tarefa ou interação:")
-mensagem = st.text_area("Digite abaixo...", height=150)
-
+# Botão de envio
 if st.button("Enviar"):
-    if mensagem.strip():
-        st.info("Processando com IA...")
-        resposta = interpretar_entrada(
-            mensagem,
-            st.session_state["chave_api"],
-            st.session_state["provedor"]
-        )
-
-        salvar_interacao(
-            usuario_id=st.session_state["usuario_id"],
-            entrada=mensagem,
-            resposta=resposta
-        )
-        st.success("Interação salva!")
-        st.markdown("### 🤖 Resposta:")
-        st.markdown(resposta)
+    if not nome_usuario:
+        st.warning("Por favor, digite seu nome.")
+    elif not mensagem:
+        st.warning("Escreva alguma mensagem antes de enviar.")
     else:
-        st.warning("Digite algo para registrar.")
+        # Usa a chave fornecida ou a padrão (em config.py, vinda do Streamlit secrets)
+        chave_api = chave_api_input or OPENAI_API_KEY
 
-# Exibe histórico
-st.subheader("📜 Últimos registros")
-historico = buscar_historico(st.session_state["usuario_id"])
-for h in historico:
-    with st.expander(f"🕒 {h['data_criacao'].strftime('%d/%m %H:%M')}"):
-        st.markdown(f"**Você:** {h['entrada']}")
-        st.markdown(f"**IA:** {h['resposta']}")
+        # Garante que o usuário existe no banco
+        usuario_id = obter_ou_criar_usuario(nome_usuario, chave_api, provedor)
+
+        # Envia a mensagem para o interpretador
+        resposta = interpretar_entrada(mensagem, chave_api, provedor)
+
+        # Mostra a resposta na tela
+        st.markdown("### Resposta da IA:")
+        st.markdown(resposta)
+
+        # Salva no banco de dados
+        salvar_interacao(usuario_id, mensagem, resposta)
+
+        # Histórico
+        st.markdown("### Histórico de interações:")
+        historico = buscar_historico(usuario_id)
+        for entrada in historico:
+            st.markdown(f"**Você:** {entrada[0]}")
+            st.markdown(f"**IA:** {entrada[1]}")
+            st.markdown("---")
