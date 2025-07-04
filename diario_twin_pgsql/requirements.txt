@@ -1,0 +1,5 @@
+streamlit
+openai
+requests
+psycopg2-binary
+google-generativeai
